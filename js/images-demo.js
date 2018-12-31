@@ -95,30 +95,6 @@ var sample_test_instance = function() {
   return {x:xs, label:labels[n]};
 }
 
-var data_img_elts = new Array(num_batches);
-var img_data = new Array(num_batches);
-var loaded = new Array(num_batches);
-var loaded_train_batches = [];
-
-// int main
-$(window).load(function() {
-    //$("#newnet").val(t);
-    //eval($("#newnet").val());
-
-    $.get("output/fr_network.js", function(response) {
-        $("#newnet").val(response);
-        eval($("#newnet").val());
-    });
-
-    update_net_param_display();
-
-    for(var k=0;k<loaded.length;k++) { loaded[k] = false; }
-
-    load_data_batch(0); // async load train set batch 0
-    load_data_batch(test_batch); // async load test set
-    start_fun();
-});
-
 var start_fun = function() {
   if(loaded[0] && loaded[test_batch]) {
     console.log('starting!');
