@@ -177,6 +177,10 @@ var draw_activations_COLOR = function(elt, A, scale, grads) {
   var draw_grads = false;
   if(typeof(grads) !== 'undefined') draw_grads = grads;
 
+  if (grads) {
+      console.log("Gradients!");
+  }
+
   // get max and min activation to scale the maps automatically
   var w = draw_grads ? A.dw : A.w;
   var mm = maxmin(w);
@@ -189,13 +193,14 @@ var draw_activations_COLOR = function(elt, A, scale, grads) {
   canv.height = H;
   var ctx = canv.getContext('2d');
   var g = ctx.createImageData(W, H);
+  var dval;
   for(var d=0;d<3;d++) {
     for(var x=0;x<A.sx;x++) {
       for(var y=0;y<A.sy;y++) {
         if(draw_grads) {
-          var dval = Math.floor((A.get_grad(x,y,d)-mm.minv)/mm.dv*255);
+          dval = Math.floor((A.get_grad(x,y,d)-mm.minv)/mm.dv*255);
         } else {
-          var dval = Math.floor((A.get(x,y,d)-mm.minv)/mm.dv*255);
+          dval = Math.floor((A.get(x,y,d)-mm.minv)/mm.dv*255);
         }
         for(var dx=0;dx<s;dx++) {
           for(var dy=0;dy<s;dy++) {
@@ -228,7 +233,7 @@ var visualize_activations = function(net, elt) {
     activations_div.appendChild(document.createTextNode('Activations:'));
     activations_div.appendChild(document.createElement('br'));
     activations_div.className = 'layer_act';
-    var scale = 2;
+    var scale = 1;
     if(L.layer_type==='softmax' || L.layer_type==='fc') scale = 10; // for softmax
 
     // HACK to draw in color in input layer
@@ -236,7 +241,6 @@ var visualize_activations = function(net, elt) {
       draw_activations_COLOR(activations_div, L.out_act, scale);
       draw_activations_COLOR(activations_div, L.out_act, scale, true);
 
-      /*
       // visualize positive and negative components of the gradient separately
       var dd = L.out_act.clone();
       var ni = L.out_act.w.length;
@@ -244,23 +248,18 @@ var visualize_activations = function(net, elt) {
       draw_activations_COLOR(activations_div, dd, scale);
       for(var q=0;q<ni;q++) { var dwq = L.out_act.dw[q]; dd.w[q] = dwq < 0 ? -dwq : 0.0; }
       draw_activations_COLOR(activations_div, dd, scale);
-      */
 
-      /*
       // visualize what the network would like the image to look like more
       var dd = L.out_act.clone();
       var ni = L.out_act.w.length;
       for(var q=0;q<ni;q++) { var dwq = L.out_act.dw[q]; dd.w[q] -= 20*dwq; }
       draw_activations_COLOR(activations_div, dd, scale);
-      */
 
-      /*
       // visualize gradient magnitude
       var dd = L.out_act.clone();
       var ni = L.out_act.w.length;
       for(var q=0;q<ni;q++) { var dwq = L.out_act.dw[q]; dd.w[q] = dwq*dwq; }
       draw_activations_COLOR(activations_div, dd, scale);
-      */
 
     } else {
       draw_activations(activations_div, L.out_act, scale);
@@ -272,7 +271,7 @@ var visualize_activations = function(net, elt) {
       grad_div.appendChild(document.createTextNode('Activation Gradients:'));
       grad_div.appendChild(document.createElement('br'));
       grad_div.className = 'layer_grad';
-      var scale = 2;
+      var scale = 1;
       if(L.layer_type==='softmax' || L.layer_type==='fc') scale = 10; // for softmax
       draw_activations(grad_div, L.out_act, scale, true);
       activations_div.appendChild(grad_div);
@@ -288,10 +287,10 @@ var visualize_activations = function(net, elt) {
         for(var j=0;j<L.filters.length;j++) {
           // HACK to draw in color for first layer conv filters
           if(i===1) {
-            draw_activations_COLOR(filters_div, L.filters[j], 2);
+            draw_activations_COLOR(filters_div, L.filters[j], scale);
           } else {
             filters_div.appendChild(document.createTextNode('('));
-            draw_activations(filters_div, L.filters[j], 2);
+            draw_activations(filters_div, L.filters[j], scale);
             filters_div.appendChild(document.createTextNode(')'));
           }
         }
@@ -300,10 +299,10 @@ var visualize_activations = function(net, elt) {
         filters_div.appendChild(document.createTextNode('Weight Gradients:'));
         filters_div.appendChild(document.createElement('br'));
         for(var j=0;j<L.filters.length;j++) {
-          if(i===1) { draw_activations_COLOR(filters_div, L.filters[j], 2, true); }
+          if(i===1) { draw_activations_COLOR(filters_div, L.filters[j], scale, true); }
           else {
             filters_div.appendChild(document.createTextNode('('));
-            draw_activations(filters_div, L.filters[j], 2, true);
+            draw_activations(filters_div, L.filters[j], scale, true);
             filters_div.appendChild(document.createTextNode(')'));
           }
         }
@@ -460,42 +459,45 @@ var testImage_NoVis = function(img) {
 
 
 var testImage = function(img) {
-  var x = convnetjs.img_to_vol(img);
-  var out_p = net.forward(x);
+    var x = convnetjs.img_to_vol(img);
+    var out_p = net.forward(x);
+    net.backward();
 
+    var preds =[]
+    for(var k=0;k<out_p.w.length;k++) {
+        preds.push({k:k,p:out_p.w[k]});
+    }
 
-  var vis_elt = document.getElementById("visnet");
-  visualize_activations(net, vis_elt);
+    preds.sort(function(a,b){return a.p<b.p ? 1:-1;});
 
-  var preds =[]
-  for(var k=0;k<out_p.w.length;k++) { preds.push({k:k,p:out_p.w[k]}); }
-  preds.sort(function(a,b){return a.p<b.p ? 1:-1;});
+    // add predictions
+    var div = document.createElement('div');
+    div.className = 'testdiv';
 
-  // add predictions
-  var div = document.createElement('div');
-  div.className = 'testdiv';
+    // draw the image into a canvas
+    draw_activations_COLOR(div, x, 2);
 
-  // draw the image into a canvas
-  draw_activations_COLOR(div, x, 2);
+    var probsdiv = document.createElement('div');
 
-  var probsdiv = document.createElement('div');
-
-
-  var t = '';
-  for(var k=0;k<3;k++) {
+    var t = '';
+    for(var k=0;k<3;k++) {
     var col = k===0 ? 'rgb(85,187,85)' : 'rgb(187,85,85)';
-    t += '<div class=\"pp\" style=\"width:' + Math.floor(preds[k].p/1*100) + 'px; background-color:' + col + ';\">' + classes_txt[preds[k].k] + '</div>'
-  }
+        t += '<div class=\"pp\" style=\"width:' + Math.floor(preds[k].p/1*100) + 'px; background-color:' + col + ';\">' + classes_txt[preds[k].k] + '</div>'
+    }
 
-  probsdiv.innerHTML = t;
-  probsdiv.className = 'probsdiv';
-  div.appendChild(probsdiv);
+    probsdiv.innerHTML = t;
+    probsdiv.className = 'probsdiv_2';
+    div.appendChild(probsdiv);
 
-  // add it into DOM
-  $(div).prependTo($("#testset_vis")).hide().fadeIn('slow').slideDown('slow');
-  if($(".probsdiv").length>200) {
-    $("#testset_vis > .probsdiv").last().remove(); // pop to keep upper bound of shown items
-  }
+    // add it into DOM
+    $(div).prependTo($("#testset_vis")).hide().fadeIn('slow').slideDown('slow');
+
+    if($(".probsdiv_2").length>200) {
+        $("#testset_vis > .probsdiv_2").last().remove(); // pop to keep upper bound of shown items
+    }
+
+    var vis_elt = document.getElementById("visnet");
+    visualize_activations(net, vis_elt);
 }
 
 var lossGraph = new cnnvis.Graph();
@@ -505,78 +507,78 @@ var trainAccWindow = new cnnutil.Window(100);
 var valAccWindow = new cnnutil.Window(100);
 var testAccWindow = new cnnutil.Window(50, 1);
 var step_num = 0;
+
 var step = function(sample) {
+    var x = sample.x;
+    var y = sample.label;
 
-  var x = sample.x;
-  var y = sample.label;
-
-  if(sample.isval) {
-    // use x to build our estimate of validation error
-    net.forward(x);
-    var yhat = net.getPrediction();
-    var val_acc = yhat === y ? 1.0 : 0.0;
-    valAccWindow.add(val_acc);
-    return; // get out
-  }
-
-  // train on it with network
-  var stats = trainer.train(x, y);
-  var lossx = stats.cost_loss;
-  var lossw = stats.l2_decay_loss;
-
-  // keep track of stats such as the average training error and loss
-  var yhat = net.getPrediction();
-  var train_acc = yhat === y ? 1.0 : 0.0;
-  xLossWindow.add(lossx);
-  wLossWindow.add(lossw);
-  trainAccWindow.add(train_acc);
-
-  // visualize training status
-  var train_elt = document.getElementById("trainstats");
-  train_elt.innerHTML = '';
-  var t = 'Forward time per example: ' + stats.fwd_time + 'ms';
-  train_elt.appendChild(document.createTextNode(t));
-  train_elt.appendChild(document.createElement('br'));
-  var t = 'Backprop time per example: ' + stats.bwd_time + 'ms';
-  train_elt.appendChild(document.createTextNode(t));
-  train_elt.appendChild(document.createElement('br'));
-  var t = 'Classification loss: ' + f2t(xLossWindow.get_average());
-  train_elt.appendChild(document.createTextNode(t));
-  train_elt.appendChild(document.createElement('br'));
-  var t = 'L2 Weight decay loss: ' + f2t(wLossWindow.get_average());
-  train_elt.appendChild(document.createTextNode(t));
-  train_elt.appendChild(document.createElement('br'));
-  var t = 'Training accuracy: ' + f2t(trainAccWindow.get_average());
-  train_elt.appendChild(document.createTextNode(t));
-  train_elt.appendChild(document.createElement('br'));
-  var t = 'Validation accuracy: ' + f2t(valAccWindow.get_average());
-  train_elt.appendChild(document.createTextNode(t));
-  train_elt.appendChild(document.createElement('br'));
-  var t = 'Examples seen: ' + step_num;
-  train_elt.appendChild(document.createTextNode(t));
-  train_elt.appendChild(document.createElement('br'));
-
-  // visualize activations
-  if(step_num % 100 === 0) {
-    var vis_elt = document.getElementById("visnet");
-    visualize_activations(net, vis_elt);
-  }
-
-  // log progress to graph, (full loss)
-  if(step_num % 200 === 0) {
-    var xa = xLossWindow.get_average();
-    var xw = wLossWindow.get_average();
-    if(xa >= 0 && xw >= 0) { // if they are -1 it means not enough data was accumulated yet for estimates
-      lossGraph.add(step_num, xa + xw);
-      lossGraph.drawSelf(document.getElementById("lossgraph"));
+    if(sample.isval) {
+        // use x to build our estimate of validation error
+        net.forward(x);
+        var yhat = net.getPrediction();
+        var val_acc = yhat === y ? 1.0 : 0.0;
+        valAccWindow.add(val_acc);
+        return; // get out
     }
-  }
 
-  // run prediction on test set
-  if((step_num % 100 === 0 && step_num > 0) || step_num===100) {
-    test_predict();
-  }
-  step_num++;
+    // train on it with network
+    var stats = trainer.train(x, y);
+    var lossx = stats.cost_loss;
+    var lossw = stats.l2_decay_loss;
+
+    // keep track of stats such as the average training error and loss
+    var yhat = net.getPrediction();
+    var train_acc = yhat === y ? 1.0 : 0.0;
+    xLossWindow.add(lossx);
+    wLossWindow.add(lossw);
+    trainAccWindow.add(train_acc);
+
+    // visualize training status
+    var train_elt = document.getElementById("trainstats");
+    train_elt.innerHTML = '';
+    var t = 'Forward time per example: ' + stats.fwd_time + 'ms';
+    train_elt.appendChild(document.createTextNode(t));
+    train_elt.appendChild(document.createElement('br'));
+    var t = 'Backprop time per example: ' + stats.bwd_time + 'ms';
+    train_elt.appendChild(document.createTextNode(t));
+    train_elt.appendChild(document.createElement('br'));
+    var t = 'Classification loss: ' + f2t(xLossWindow.get_average());
+    train_elt.appendChild(document.createTextNode(t));
+    train_elt.appendChild(document.createElement('br'));
+    var t = 'L2 Weight decay loss: ' + f2t(wLossWindow.get_average());
+    train_elt.appendChild(document.createTextNode(t));
+    train_elt.appendChild(document.createElement('br'));
+    var t = 'Training accuracy: ' + f2t(trainAccWindow.get_average());
+    train_elt.appendChild(document.createTextNode(t));
+    train_elt.appendChild(document.createElement('br'));
+    var t = 'Validation accuracy: ' + f2t(valAccWindow.get_average());
+    train_elt.appendChild(document.createTextNode(t));
+    train_elt.appendChild(document.createElement('br'));
+    var t = 'Examples seen: ' + step_num;
+    train_elt.appendChild(document.createTextNode(t));
+    train_elt.appendChild(document.createElement('br'));
+
+    // visualize activations
+    if(step_num % 100 === 0) {
+        var vis_elt = document.getElementById("visnet");
+        visualize_activations(net, vis_elt);
+    }
+
+    // log progress to graph, (full loss)
+    if(step_num % 200 === 0) {
+        var xa = xLossWindow.get_average();
+        var xw = wLossWindow.get_average();
+            if(xa >= 0 && xw >= 0) { // if they are -1 it means not enough data was accumulated yet for estimates
+                lossGraph.add(step_num, xa + xw);
+                lossGraph.drawSelf(document.getElementById("lossgraph"));
+            }
+    }
+
+    // run prediction on test set
+    if((step_num % 100 === 0 && step_num > 0) || step_num===100) {
+        test_predict();
+    }
+    step_num++;
 }
 
 // user settings

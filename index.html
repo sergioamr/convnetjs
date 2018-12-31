@@ -79,6 +79,7 @@ function load_network() {
     $.getJSON( "../network/" + network_name + ".json", function( json ) {
         net = new convnetjs.Net();
         net.fromJSON(json);
+        net.network_name = network_name;
         trainer.learning_rate = 0.0001;
         trainer.momentum = 0.9;
 
@@ -184,7 +185,7 @@ $(window).load(function() {
         <input name="image" type="file" accept="image/*" onchange="loadFile(event)">
 
         <input type="submit" value="Test Image" onclick="
-                testImage(document.getElementById('preview_img'));
+                testImage(document.getElementById('preview_scaled_img'));
         ">
         <br>
       </div>
