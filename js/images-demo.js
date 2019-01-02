@@ -485,6 +485,32 @@ var testImage = function(img) {
         t += '<div class=\"pp\" style=\"width:' + Math.floor(preds[k].p/1*100) + 'px; background-color:' + col + ';\">' + classes_txt[preds[k].k] + '</div>'
     }
 
+    if (classes_txt[preds[0].k] == "rock") {
+        var cat = new Image();
+        cat.src = "/images/rock_64.png"
+        cat.width = 64; cat.height = 64;
+        div.appendChild(cat);
+    } else
+    if (classes_txt[preds[0].k] == "fraggle") {
+        var cat = new Image();
+        cat.src = "/images/fraggle_64.png"
+        cat.width = 64; cat.height = 64;
+        div.appendChild(cat);
+    } else
+    if (classes_txt[preds[1].k] == "rock") {
+        var cat = new Image();
+        cat.src = "/images/rock_64.png"
+        cat.width = 64; cat.height = 64;
+        div.appendChild(cat);
+    } else
+    if (classes_txt[preds[1].k] == "fraggle") {
+        var cat = new Image();
+        cat.src = "/images/fraggle_64.png"
+        cat.width = 64; cat.height = 64;
+        div.appendChild(cat);
+    }
+
+
     probsdiv.innerHTML = t;
     probsdiv.className = 'probsdiv_2';
     div.appendChild(probsdiv);

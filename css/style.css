@@ -60,6 +60,13 @@
   float: left;
   width: 64px;
 }
+
+.testdiv img {
+    float: left;
+    width: 64px;
+    height: 64px;
+}
+
 .testdiv {
   background-color: rgba(255,255,255,0.65);
   height: auto;

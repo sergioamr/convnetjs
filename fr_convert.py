@@ -108,7 +108,7 @@ N += "layer_defs.push({type:'conv', sx:5, filters:40, stride:1, pad:2, activatio
 N += "layer_defs.push({type:'pool', sx:2, stride:2}); \n"
 N += "layer_defs.push({type:'conv', sx:5, filters:40, stride:1, pad:2, activation:'relu'}); \n"
 N += "layer_defs.push({type:'pool', sx:2, stride:2}); \n"
-N += "layer_defs.push({type:'softmax', num_classes:4}); \n"
+N += "layer_defs.push({type:'softmax', num_classes: %d }); \n" % len(labels_name)
 N += " \n"
 N += "net = new convnetjs.Net(); \n"
 N += "net.makeLayers(layer_defs); \n"
